@@ -76,6 +76,6 @@ class TestEditDistance < Test::Unit::TestCase
   end
   
   def test_edit_distance_for_multiple_operations
-    assert_equal([5, [:delete, :sub, :match, :match, :match, :match, :match, :insert, :sub, :match, :sub, :match, :match, :match, :match]], edit_distance("Thou shalt not", "You should not"))
+    assert_equal([12, [:delete, :sub, :match, :match, :match, :match, :match, :insert, :sub, :match, :sub, :match, :match, :match, :match, :match, :delete, :delete, :sub, :sub, :sub, :sub, :match, :swap, :match]], edit_distance("Thou shalt not murder one", "You should not kill noe"))
   end
 end
