@@ -39,35 +39,29 @@ def edit_distance(text, pattern)
   editions.last.last
 end
 
-def dynamic_longest_common_string(text1, text2)
+def longest_common_sequence(text1, text2)
   operations = edit_distance(text1, text2)[1]
   
-  matches = [""]
+  matches = ""
   operations.inject(text1.chars.to_a) do |memo, operation|
-    if operation == :delete
-      memo.shift
-      matches << ""
-    elsif operation == :insert
-      matches << ""
-    elsif operation == :match
-      matches[-1] << memo.shift
-    end
+    memo.shift if operation == :delete
+    matches << memo.shift if operation == :match
     memo
   end
-  
-  matches.max_by {|match| match.size}
+  matches
 end
 
-def longest_common_string(text1, text2)
-
+def shortest_common_sequence(text1, text2)
+  ""
 end
 
 class TestLongestCommonSequence < Test::Unit::TestCase
-  def test_dynamic_longest_common_string
-    assert_equal("ograph", dynamic_longest_common_string("photograph", "tomography"))
+  def test_longest_common_sequence
+    assert_equal("tograph", longest_common_sequence("photograph", "tomography"))
+    assert_equal("eca", longest_common_sequence("democrat", "republican"))
   end
   
-  def test_longest_common_string
-    assert_equal("ograph", longest_common_string("photograph", "tomography"))
+  def test_shortest_common_sequence
+    assert_equal("ograph", shortest_common_sequence("photograph", "tomography"))
   end
 end

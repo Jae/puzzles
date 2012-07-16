@@ -43,7 +43,7 @@ def edit_distance(text, pattern)
     end
   end
   
-  editions[text.size][pattern.size]
+  editions.last.last
 end
 
 def recursive_edit_distance(text, pattern)
