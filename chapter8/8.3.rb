@@ -42,24 +42,20 @@ end
 def dynamic_longest_common_string(text1, text2)
   operations = edit_distance(text1, text2)[1]
   
-  matches = [""]
-  operations.inject(text1.chars.to_a) do |memo, operation|
-    if operation == :delete
-      memo.shift
-      matches << ""
-    elsif operation == :insert
-      matches << ""
-    elsif operation == :match
-      matches[-1] << memo.shift
+  text1 = text1.chars.to_a
+  operations.inject([""]) do |memo, operation|
+    if operation == :match
+      memo[-1] << text1.shift
+    else
+      text1.shift if operation == :delete
+      memo << ""
     end
     memo
-  end
-  
-  matches.max_by {|match| match.size}
+  end.max_by {|match| match.size}
 end
 
 def longest_common_string(text1, text2)
-
+  
 end
 
 class TestLongestCommonSequence < Test::Unit::TestCase
