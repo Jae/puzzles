@@ -13,7 +13,7 @@ def edit_cost(operation, current = "", target = "")
   end
 end
 
-def longest_common_sequence(text1, text2)
+def dynamic_longest_common_sequence(text1, text2)
   editions = Array.new(text1.size+1) {[]} # editions[i][j] = [min_cost, [operations]] done to match ith text1 with jth text2
   (0..text1.size).each do |text1_index|
     editions[text1_index][0] = [text1_index, text1_index.times.map {|_| :delete}]
@@ -38,21 +38,29 @@ def longest_common_sequence(text1, text2)
   end
   
   matches = [""]
-  editions[text1.size][text2.size][1].each_with_index do |operation, index|
-    if operation == :insert
-      text1.insert(index, "*")
-    end
-    
-    if operation == :match
-      matches[-1] = matches[-1] + text1[index]
-    else
+  editions[text1.size][text2.size][1].inject(text1.chars.to_a) do |memo, operation|
+    if operation == :delete
+      memo.shift
       matches << ""
+    elsif operation == :insert
+      matches << ""
+    elsif operation == :match
+      matches[-1] = matches[-1] + memo.shift
     end
+    memo
   end
   matches.max_by {|match| match.size}
 end
 
+def longest_common_sequence(text1, text2)
+  
+end
+
 class TestLongestCommonSequence < Test::Unit::TestCase
+  def test_dynamic_longest_common_sequence
+    assert_equal("ograph", dynamic_longest_common_sequence("photograph", "tomography"))
+  end
+  
   def test_longest_common_sequence
     assert_equal("ograph", longest_common_sequence("photograph", "tomography"))
   end
