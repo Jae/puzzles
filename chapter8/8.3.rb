@@ -58,7 +58,7 @@ def longest_common_string(text1, text2)
   
 end
 
-class TestLongestCommonSequence < Test::Unit::TestCase
+class TestLongestCommonString < Test::Unit::TestCase
   def test_dynamic_longest_common_string
     assert_equal("ograph", dynamic_longest_common_string("photograph", "tomography"))
   end
