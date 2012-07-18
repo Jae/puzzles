@@ -2,20 +2,17 @@ require "test/unit"
 
 def distinct_changes_by_coins(amount, coins)
   distinct_changes = 0
-  changes = {0 => [{}]}
-  while true do
-    all_new_amount_bigger_than_amount = true
-    changes.keys.dup.each do |change_amount|
-      p "change_amount: #{change_amount}"
-      coins.each do |coin|
-        all_new_amount_bigger_than_amount = false if (change_amount + coin) < amount
-        # p [change_amount, coin, amount, all_new_amount_bigger_than_amount]
-        distinct_changes += 1 if (change_amount + coin) == amount
-        changes[change_amount + coin] ||= changes[change_amount].merge(coin => (changes[change_amount][coin]||0) + 1)
-      end
-    end
-    return distinct_changes if all_new_amount_bigger_than_amount
-  end
+  new_amounts = [0]
+  begin
+    new_amounts = new_amounts.product(coins).inject([]) do |memo, (new_amount,coin)|
+      memo << new_amount + coin
+      memo
+    end.uniq
+    distinct_changes += new_amounts.select {|new_amount| new_amount == amount}.size
+
+    new_amounts = new_amounts.uniq
+  end while new_amounts.any? {|new_amount| new_amount < amount}
+  distinct_changes 
 end
 
 class TestNumberOfDistinctChangeByCoins < Test::Unit::TestCase
@@ -27,6 +24,6 @@ class TestNumberOfDistinctChangeByCoins < Test::Unit::TestCase
     assert_equal(2, distinct_changes_by_coins(9, [10,6,1]))
     assert_equal(3, distinct_changes_by_coins(10, [10,6,1]))
     assert_equal(4, distinct_changes_by_coins(12, [10,6,1]))
-    assert_equal(4, distinct_changes_by_coins(20, [10,6,1]))    
+    assert_equal(7, distinct_changes_by_coins(20, [10,6,1]))
   end
 end
