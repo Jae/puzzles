@@ -1,18 +1,24 @@
 require "test/unit"
 
 def distinct_changes_by_coins(amount, coins)
-  distinct_changes = 0
-  new_amounts = [0]
+  changes = {}
+  new_changes = {0 => [{}]}
   begin
-    new_amounts = new_amounts.product(coins).inject([]) do |memo, (new_amount,coin)|
-      memo << new_amount + coin
+    new_changes = new_changes.inject({}) do |memo, (change, coins_in_change)|
+      coins_in_change.each do |i|
+        coins.each do |coin|
+          memo[coin+change] ||= []
+          memo[coin+change] << i.merge(coin => (i[coin]||0) + 1)
+        end
+      end if change < amount
       memo
-    end.uniq
-    distinct_changes += new_amounts.select {|new_amount| new_amount == amount}.size
-
-    new_amounts = new_amounts.uniq
-  end while new_amounts.any? {|new_amount| new_amount < amount}
-  distinct_changes 
+    end
+    new_changes.each do |change, coins|
+      changes[change] = ((changes[change]||[]) + coins).uniq
+    end
+  end while new_changes.any? {|(change, _)| change < amount}
+  
+  changes[amount].size
 end
 
 class TestNumberOfDistinctChangeByCoins < Test::Unit::TestCase
