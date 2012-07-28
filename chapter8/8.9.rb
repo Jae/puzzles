@@ -24,7 +24,6 @@ def find_knapsack_dynamically(target, set)
   
   subset = []
   (1..set.size).to_a.reverse.inject(target) do |current_target, ith_in_set|
-    p [ith_in_set, current_target, knapsack[ith_in_set][current_target]]
     if knapsack[ith_in_set][current_target][1]
       subset << set[ith_in_set-1]
       current_target - set[ith_in_set-1]
