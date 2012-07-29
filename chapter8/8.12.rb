@@ -8,7 +8,7 @@ def dynamic_minimum_split_cost(split_positions, string_size)
   end
   
   (2..string_size).each do |size_i|
-    (0..string_size).each do |jth_index|
+    (0...string_size).each do |jth_index|
       legal_positions = split_positions.select do |split_position|
         (jth_index < split_position) && (split_position < jth_index + size_i)
       end
