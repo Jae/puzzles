@@ -1,8 +1,8 @@
 require "test/unit"
 
-def city_walks(city_size, bad_neighborhoods)
+def city_walk(city_size, bad_neighborhoods)
   walks = Array.new(city_size[0]) { Array.new(city_size[1]) } # walks[i][j] = previous minimum walk position that lead to city[i][j]
-  walks[0][0] = [0,0]
+  walks[0][0] = []
   
   next_stops = Proc.new do |stop|
     [
@@ -17,10 +17,10 @@ def city_walks(city_size, bad_neighborhoods)
   end
 
   last_stops = [[0,0]]
-  until last_stops.all? {|stop| next_stops.call(stop).empty? }
-    last_stops = last_stops.inject([]) do |memo, stop|
-      next_stops.call(stop).each do |next_stop|
-        walks[next_stop[0]][next_stop[1]] = stop
+  until last_stops.all? {|last_stop| next_stops.call(last_stop).empty? }
+    last_stops = last_stops.inject([]) do |memo, last_stop|
+      next_stops.call(last_stop).each do |next_stop|
+        walks[next_stop[0]][next_stop[1]] = last_stop
         memo << next_stop
       end
       memo
@@ -40,7 +40,7 @@ end
 
 class TestCityWalk < Test::Unit::TestCase
   def test_city_walk
-    assert_equal([], city_walks([3,3], [[2,1], [1,2]]))
-    assert_equal([[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3]], city_walks([4,4], [[1,1], [2,1], [3,2], [4,0], [0,4], [1,3]]))
+    assert_equal([], city_walk([3,3], [[2,1], [1,2]]))
+    assert_equal([[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3]], city_walk([4,4], [[1,1], [2,1], [3,2], [3,0], [0,3], [1,3]]))
   end
 end
