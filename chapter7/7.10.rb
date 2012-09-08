@@ -30,7 +30,7 @@ def colour_vertices_via_simulated_annealing(graph, expected_cost)
       number_of_iterations += 1
       random_vertex = coloured.sample.sample
       origin_colour_group = coloured.find {|colour_group| colour_group.include? random_vertex}
-      target_colour_group = (coloured - [origin_colour_group]).reject{|colour_group| colour_group.any? {|member| graph[random_vertex].include? member}}.sample || []
+      target_colour_group = (coloured - [origin_colour_group]).reject {|colour_group| colour_group.any? {|vertex| graph[random_vertex].include? vertex}}.sample || []
       
       progress = (
         (coloured - [target_colour_group] - [origin_colour_group]) + 
@@ -44,7 +44,7 @@ def colour_vertices_via_simulated_annealing(graph, expected_cost)
         coloured = progress
       end
     end
-    temp = temp * 0.8
+    temp *= 0.8
   end until coloured.size <= expected_cost
   [number_of_iterations, coloured]
 end
@@ -92,8 +92,9 @@ class TestVertexColouring < Test::Unit::TestCase
         M:[:L, :N],
         N:[:L, :M]
       }, 3)
+      
       p coloured
-      coloured.first < 203
+      coloured.first <= 202
     end
   end
 end
