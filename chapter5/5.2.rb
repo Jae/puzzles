@@ -3,7 +3,7 @@ require "test/unit"
 def dfs(graph, node, visited=[], processed=[])
   visited << node
   graph[node].sort.each do |neighbour|
-    p "cycle detected #{node} -> #{neighbour}, #{visited.inspect}" if visited.include? neighbour and !processed.include? neighbour
+    raise "cycle detected #{node} -> #{neighbour}, #{visited.inspect}" if visited.include? neighbour and !processed.include? neighbour
     dfs(graph, neighbour, visited, processed) unless visited.include? neighbour
   end
   processed << node
@@ -27,7 +27,7 @@ class TestTopologicalSort < Test::Unit::TestCase
       D:[:E, :G],
       E:[:C, :F, :G],
       F:[:H],
-      G:[:F, :I],
+      G:[:I],
       H:[:G, :J],
       I:[:J],
       J:[]
