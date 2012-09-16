@@ -36,7 +36,7 @@ def tree_from_pre_and_post_order(pre_traversal, post_traversal)
   forest
 end
 
-class TestTopologicalSort < Test::Unit::TestCase
+class TestTreeReconstruction < Test::Unit::TestCase
   def test_tree_reconstruction_from_pre_and_in_order_traversal
     assert_equal({:F=>[
       {:B=>[
