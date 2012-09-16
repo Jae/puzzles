@@ -19,6 +19,23 @@ def topological_sort(graph)
 end
 
 class TestTopologicalSort < Test::Unit::TestCase
+  def test_topological_sort_failed_due_to_cycle_in_graph
+    assert_raise(RuntimeError) do
+      topological_sort({
+        A:[:B, :D], 
+        B:[:C, :D, :E], 
+        C:[:F], 
+        D:[:E, :G],
+        E:[:C, :F, :G],
+        F:[:H],
+        G:[:I, :F],
+        H:[:G, :J],
+        I:[:J],
+        J:[]
+      })
+    end
+  end
+  
   def test_topological_sort
     assert_equal([:A, :B, :D, :E, :C, :F, :H, :G, :I, :J], topological_sort({
       A:[:B, :D], 
