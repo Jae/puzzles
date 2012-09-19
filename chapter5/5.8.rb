@@ -26,10 +26,9 @@ end
 
 def switch_from_incidence_matrix_to_adjacency_list_in_n_times_m(graph)
   graph.transpose.inject(Array.new(graph.size) {[]}) do |adjacency_list, edge|
-    vertices = []
-    edge.each_with_index do |neighbour, vertex|
-      vertices << vertex if neighbour == 1
-    end
+    vertices = edge.map.each_with_index do |neighbour, vertex|
+      vertex if neighbour == 1
+    end.compact
     adjacency_list[vertices.first] << vertices.last
     adjacency_list[vertices.last] << vertices.first
     adjacency_list
