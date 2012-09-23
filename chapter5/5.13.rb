@@ -28,7 +28,7 @@ def min_vertex_cover_by_degree_of_node(tree, parents={}, cover=[], root=tree.key
   cover.sort
 end
 
-class TestVertexCover < Test::Unit::TestCase
+class TestMinVertexCover < Test::Unit::TestCase
   def test_min_vertex_cover
     assert_equal([:B,:C,:E,:J], min_vertex_cover({
       A:[:B,:C],

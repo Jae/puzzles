@@ -24,7 +24,7 @@ def max_independent_set_by_degree_of_node(tree, parents={}, set=[], root=tree.ke
   set.sort
 end
 
-class TestIndependentSet < Test::Unit::TestCase
+class TestMaxIndependentSet < Test::Unit::TestCase
   def test_max_independent_set
     assert_equal([:A, :D, :F, :G, :H, :I, :K, :L, :M, :N], max_independent_set({
       A:[:B,:C],
