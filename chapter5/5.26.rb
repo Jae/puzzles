@@ -1,55 +1,27 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
 
-def strongly_connected_vertices_from(graph, vertex, visited, stack=[], oldest_node_connected_to={})
-  visited << vertex
-  stack.push vertex
-  oldest_node_connected_to[vertex] = vertex
-  
-  strongly_connected_vertices = []
-  graph[vertex].each do |neighbour|
-    unless visited.include? neighbour
-      strongly_connected_vertices += strongly_connected_vertices_from(graph, neighbour, visited, stack, oldest_node_connected_to)
-    end
-    
-    if stack.include? neighbour
-      oldest_node_connected_to[vertex] = visited.find {|node| node == oldest_node_connected_to[vertex] || node == oldest_node_connected_to[neighbour]}
-    end
+def mother_vertex?(graph, vertex)
+  reachable = []
+  UnweightedGraph.depth_first_traversal(graph, vertex, reachable)
+  reachable.size == graph.keys.size
+end
+
+def any_mother_vertex?(graph)
+  candidates = graph.keys.dup
+  until candidates.empty?
+    vertex = candidates.shift
+    reachable = []
+    UnweightedGraph.depth_first_traversal(graph, vertex, reachable)
+    return true if reachable.size == graph.keys.size
+    candidates -= reachable
   end
-  
-  if oldest_node_connected_to[vertex] == vertex
-    vertices = []
-    begin
-      vertices << (node = stack.pop)
-    end until node == vertex
-    strongly_connected_vertices << vertices.sort
-  end
-  
-  strongly_connected_vertices
+  false
 end
 
-def strongly_connected_components(graph)
-  visited = []
-  graph.keys.map do |vertex|
-    strongly_connected_vertices_from(graph, vertex, visited) unless visited.include? vertex
-  end.compact.flatten(1).sort
-end
-
-def detect_mother_vertex(graph)
-  strongly_connected_components = strongly_connected_components(graph)
-  strongly_connected_components.select do |strongly_connected_vertices|
-    strongly_connected_vertices.all? do |vertex|
-      (strongly_connected_components - [strongly_connected_vertices]).flatten.all? {|neighbour| !graph[neighbour].include? vertex}
-    end
-  end.size < 2
-end
-
-class TestArrangeChildren < Test::Unit::TestCase
-  def test_strongly_connected_components
-    assert_equal([
-      [:A, :B, :E],
-      [:C, :D, :H],
-      [:F, :G]
-    ], strongly_connected_components({
+class MotherVertex < Test::Unit::TestCase
+  def test_mother_vertex
+    assert(mother_vertex?({
       A:[:B],
       B:[:C, :E, :F],
       C:[:D, :G],
@@ -58,11 +30,11 @@ class TestArrangeChildren < Test::Unit::TestCase
       F:[:G],
       G:[:F],
       H:[:D, :G]
-    }))
+    }, :B))
   end
   
   def test_mother_vertex_detection
-    assert(detect_mother_vertex({
+    assert(any_mother_vertex?({
       A:[:B],
       B:[:C, :E, :F],
       C:[:D, :G],

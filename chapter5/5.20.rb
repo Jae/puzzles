@@ -1,17 +1,22 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
 
-def max_induced_sub_graph(graph, minimum_degree, root=graph.keys.first)
-  sub_graph = Hash[graph.map {|(node, neighbours)| [node, neighbours.clone]}]
-  until sub_graph.all? {|(_,neighbours)| neighbours.size >= minimum_degree }
-    sub_graph.select {|node| sub_graph[node].size < minimum_degree}.each do |(node, neighbours)|
-      sub_graph.delete(node)
-      neighbours.each {|neighbour| sub_graph[neighbour].delete(node)}
+def max_induced_sub_graph(graph, minimum_degree)
+  sub_graph = Hash[graph.map {|node, neighbours| [node, neighbours.clone]}]
+  
+  UnweightedGraph.depth_first_traversal(graph) do |action, args|
+    if action == :process_vertex
+      vertex = args
+      if sub_graph[vertex].size < minimum_degree
+        sub_graph[vertex].each {|neighbour| sub_graph[neighbour].delete(vertex)}
+        sub_graph.delete(vertex)
+      end
     end
   end
   sub_graph
 end
 
-class TestMaxInducedSubGraph < Test::Unit::TestCase
+class MaxInducedSubGraph < Test::Unit::TestCase
   def test_max_induced_sub_graph
     assert_equal({
       A:[:B, :C, :D],

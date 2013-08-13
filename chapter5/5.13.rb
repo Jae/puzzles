@@ -2,6 +2,7 @@ require "test/unit"
 
 def min_vertex_cover(tree, parents={}, cover=[], root=tree.keys.first)
   children = tree[root].reject {|child| child == parents[root]}.each {|child| parents[child] = root}
+  
   children.reject{|child| tree[child].size == 1}.each do |sub_root|
     min_vertex_cover(tree, parents, cover, sub_root)
   end
@@ -19,8 +20,8 @@ def min_vertex_cover_by_degree_of_node(tree, parents={}, cover=[], root=tree.key
   end
   
   unless children.all? {|child| cover.include? child}
-    if tree[root].size > children.inject(0){|weight, child| weight + tree[child].size}
-      children.each {|child| cover << child}
+    if tree[root].size > children.map {|child| tree[child].size}.reduce(:+)
+      children.each {|child| cover << child unless cover.include? child}
     else
       cover << root
     end
@@ -28,7 +29,7 @@ def min_vertex_cover_by_degree_of_node(tree, parents={}, cover=[], root=tree.key
   cover.sort
 end
 
-class TestMinVertexCover < Test::Unit::TestCase
+class MinVertexCover < Test::Unit::TestCase
   def test_min_vertex_cover
     assert_equal([:B,:C,:E,:J], min_vertex_cover({
       A:[:B,:C],

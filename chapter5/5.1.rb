@@ -1,32 +1,32 @@
 require "test/unit"
 
 def bfs(graph, start)
-  visit = []
-  progress = [start]
-  until progress.empty? do
-    node = progress.shift
-    visit << node unless visit.include? node
+  visited = []
+  to_visit = [start]
+  until to_visit.empty? do
+    node = to_visit.shift
+    visited << node unless visited.include? node
     graph[node].sort.each do |neighbour|
-      progress << neighbour unless visit.include? neighbour
+      to_visit << neighbour unless visited.include? neighbour
     end
   end
-  visit
+  visited
 end
 
-def dfs(graph, node, visit=[])
-  visit << node
+def dfs(graph, node, visited=[])
+  visited << node
   graph[node].sort.each do |neighbour|
-    dfs(graph, neighbour, visit) unless visit.include? neighbour
+    dfs(graph, neighbour, visited) unless visited.include? neighbour
   end
-  visit
+  visited
 end
 
-class TestNodeVisitOrder < Test::Unit::TestCase
+class NodeVisitOrder < Test::Unit::TestCase
   def test_bfs
     assert_equal([:A, :B, :D, :I, :C, :E, :G, :J, :F, :H], bfs({
       A:[:B, :D, :I], 
       B:[:A, :C, :D, :I], 
-      C:[:B, :F, :I], 
+      C:[:B, :F, :E], 
       D:[:A, :B, :E, :G],
       E:[:B, :C, :D, :F, :G, :H],
       F:[:C, :E, :H],
@@ -38,10 +38,10 @@ class TestNodeVisitOrder < Test::Unit::TestCase
   end
   
   def test_dfs
-    assert_equal([:A, :B, :C, :F, :E, :D, :G, :H, :J, :I], dfs({
+    assert_equal([:A, :B, :C, :E, :D, :G, :H, :F, :J, :I], dfs({
       A:[:B, :D, :I], 
       B:[:A, :C, :D, :I], 
-      C:[:B, :F, :I], 
+      C:[:B, :F, :E], 
       D:[:A, :B, :E, :G],
       E:[:B, :C, :D, :F, :G, :H],
       F:[:C, :E, :H],

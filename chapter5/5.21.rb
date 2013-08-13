@@ -1,23 +1,27 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
 
 def shortest_paths(graph, from, to)
-  visited = [from]
   shortest_paths = [[from]]
-  
-  until shortest_paths.empty? || shortest_paths.any? {|path| path.last == to}
-    shortest_paths = shortest_paths.map do |path|
-      new_paths = graph[path.last].reject {|next_node| visited.include? next_node}.map do |next_node|
-        path + [next_node]
+  UnweightedGraph.breadth_first_traversal(graph, from) do |action, args|
+    if action == :process_edge
+      edge_type, edge_from, edge_to = *args
+      existing_path = shortest_paths.find {|path| path.last == edge_to}
+      shortest_paths.select do |path|
+        if existing_path
+          path.last == edge_from && path.size == existing_path.size - 1
+        else
+          path.last == edge_from
+        end
+      end.each do |paths_to_be_extended|
+        shortest_paths << paths_to_be_extended + [edge_to]
       end
-      new_paths unless new_paths.empty?
-    end.compact.flatten(1)
-    shortest_paths.each {|path| visited << path.last unless visited.include? path.last}
+    end
   end
-  
   shortest_paths.select {|path| path.last == to}
 end
 
-class TestShortestPaths < Test::Unit::TestCase
+class ShortestPaths < Test::Unit::TestCase
   def test_shortest_paths
     assert_equal([
       [:A, :B, :F],

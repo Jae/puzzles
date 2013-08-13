@@ -26,7 +26,7 @@ def square_adjacency_matrix(graph)
   end
 end
 
-class TestSquaredGraph < Test::Unit::TestCase
+class SquaredGraph < Test::Unit::TestCase
   def test_square_graph
     assert_equal([
       [2, 3], 

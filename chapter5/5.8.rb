@@ -35,7 +35,7 @@ def switch_from_incidence_matrix_to_adjacency_list_in_n_times_m(graph)
   end
 end
 
-class TestSwitchGraphDataStructure < Test::Unit::TestCase
+class SwitchGraphDataStructure < Test::Unit::TestCase
   def test_switch_from_adjacency_matrix_to_list
     assert_equal([[1,4],[0,2,4],[1,3],[2,4,5],[0,1,3],[3]], switch_from_adjacency_matrix_to_list_in_n_square([
       [0, 1, 0, 0, 1, 0],

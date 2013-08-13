@@ -1,30 +1,57 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
 
-def max_independent_set(tree, parents={}, set=[], root=tree.keys.first)
-  children = tree[root].reject {|child| child == parents[root]}.each {|child| parents[child] = root}
-  children.reject{|child| tree[child].size == 1}.each do |sub_root|
-    max_independent_set(tree, parents, set, sub_root)
-  end
-  
-  (children + [root]).each do |candidate|
-    set << candidate unless set.include? candidate or tree[candidate].any? {|neighbour| set.include? neighbour}
+def max_independent_set(graph)
+  tree = {}
+  set = []
+  UnweightedGraph.depth_first_traversal(graph) do |action, args|
+    if action == :process_edge
+      type, from, to = *args
+      tree[from] ||= []
+      if type == :tree_edge
+        tree[from] << to
+      end
+    elsif action == :process_vertex
+      vertex = args
+      if tree[vertex].size > 0
+        candidates = tree[vertex].reject {|child| tree[child].any? {|grand_child| set.include? grand_child}}
+        if candidates.size >= 1
+          candidates.each {|candidate| set << candidate unless set.include? candidate }
+        else
+          set << vertex unless set.include? vertex
+        end
+      end
+    end
   end
   set.sort
 end
 
-def max_independent_set_by_degree_of_node(tree, parents={}, set=[], root=tree.keys.first)
-  children = tree[root].reject {|child| child == parents[root]}.each {|child| parents[child] = root}
-  children.reject{|child| tree[child].size == 1}.each do |sub_root|
-    max_independent_set_by_degree_of_node(tree, parents, set, sub_root)
-  end
-  
-  ([root] + children).each do |candidate|
-    set << candidate unless set.include? candidate or tree[candidate].any? {|neighbour| set.include? neighbour}
+def max_independent_set_by_degree_of_node(graph)
+  tree = {}
+  set = []
+  UnweightedGraph.depth_first_traversal(graph) do |action, args|
+    if action == :process_edge
+      type, from, to = *args
+      tree[from] ||= []
+      if type == :tree_edge
+        tree[from] << to
+      end
+    elsif action == :process_vertex
+      vertex = args
+      if tree[vertex].size > 0
+        candidates = tree[vertex].reject {|child| tree[child].any? {|grand_child| set.include? grand_child}}
+        if (candidates.map{|candidate| graph[candidate].size}.reduce(:+) || 0) >= graph[vertex].size
+          candidates.each {|candidate| set << candidate unless set.include? candidate }
+        else
+          set << vertex unless set.include? vertex
+        end
+      end
+    end
   end
   set.sort
 end
 
-class TestMaxIndependentSet < Test::Unit::TestCase
+class MaxIndependentSet < Test::Unit::TestCase
   def test_max_independent_set
     assert_equal([:A, :D, :F, :G, :H, :I, :K, :L, :M, :N], max_independent_set({
       A:[:B,:C],

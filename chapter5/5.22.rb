@@ -1,26 +1,32 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
 
-def remove_vertex_with_degree_of_two(graph, node=graph.keys.first, visited=[])
-  if graph[node].size == 2
-    u = graph[node].first
-    w = graph[node].last
-    graph[u].delete(node)
-    graph[u] << w unless graph[u].include? w
-    graph[w].delete(node)
-    graph[w] << u unless graph[w].include? u
-    graph.delete(node)
-    
-    remove_vertex_with_degree_of_two(graph, u, visited)
-  else
-    visited << node
-    graph[node].each do |next_node|
-      remove_vertex_with_degree_of_two(graph, next_node, visited) unless visited.include? next_node
+def remove_vertex_with_degree_of_two(graph)
+  simple_graph = Hash[graph.map {|node, neighbours| [node, neighbours.clone]}]
+
+  UnweightedGraph.depth_first_traversal(graph) do |action, args|
+    if action == :process_vertex_early
+      vertex = args
+      simple_graph[vertex].uniq!
+      if simple_graph[vertex].size == 2
+        shortcircuit_vertex(simple_graph, vertex)
+      end
     end
   end
-  graph
+  
+  simple_graph
 end
 
-class TestRemoveVertexWithDegreeOfTwo < Test::Unit::TestCase
+def shortcircuit_vertex(graph, vertex)
+  neighbours = graph[vertex]
+  neighbours.each_with_index do |neighbour, index|
+    graph[neighbour].delete(vertex)
+    graph[neighbour] << neighbours[1-index] unless graph[neighbour].include? neighbours[1-index]
+  end
+  graph.delete(vertex)
+end
+
+class RemoveVertexWithDegreeOfTwo < Test::Unit::TestCase
   def test_remove_vertex_with_degree_of_two
     assert_equal({
       :A=>[:C, :D, :E],
@@ -28,13 +34,13 @@ class TestRemoveVertexWithDegreeOfTwo < Test::Unit::TestCase
       :D=>[:A, :C, :E],
       :E=>[:A, :D, :C]
     }, remove_vertex_with_degree_of_two({
-      A:[:B, :C, :D, :E],
-      B:[:A, :C],
-      C:[:A, :B, :D, :G],
-      D:[:A, :C, :E, :F],
-      E:[:A, :D, :F, :G],
-      F:[:D, :E],
-      G:[:C, :E]
+      :A=>[:B, :C, :D, :E],
+      :B=>[:A, :C],
+      :C=>[:A, :B, :D, :G],
+      :D=>[:A, :C, :E, :F],
+      :E=>[:A, :D, :F, :G],
+      :F=>[:D, :E],
+      :G=>[:C, :E]
     }))
   end
 end
