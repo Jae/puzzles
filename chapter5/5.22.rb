@@ -1,5 +1,5 @@
 require "test/unit"
-require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
+require File.join(File.dirname(__FILE__), %w(.. lib unweighted_graph))
 
 def remove_vertex_with_degree_of_two(graph)
   simple_graph = Hash[graph.map {|node, neighbours| [node, neighbours.clone]}]

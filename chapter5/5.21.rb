@@ -1,5 +1,5 @@
 require "test/unit"
-require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
+require File.join(File.dirname(__FILE__), %w(.. lib unweighted_graph))
 
 def shortest_paths(graph, from, to)
   shortest_paths = [[from]]

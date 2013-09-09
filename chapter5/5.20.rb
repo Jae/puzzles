@@ -1,5 +1,5 @@
 require "test/unit"
-require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
+require File.join(File.dirname(__FILE__), %w(.. lib unweighted_graph))
 
 def max_induced_sub_graph(graph, minimum_degree)
   sub_graph = Hash[graph.map {|node, neighbours| [node, neighbours.clone]}]

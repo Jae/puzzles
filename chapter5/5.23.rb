@@ -1,5 +1,5 @@
 require "test/unit"
-require File.join(File.dirname(__FILE__), %w(.. graph_traversal unweighted_graph))
+require File.join(File.dirname(__FILE__), %w(.. lib unweighted_graph))
 
 def arrange_children_in_line(graph, root=:G)
   children_in_line = []
