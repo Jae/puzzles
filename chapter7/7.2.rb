@@ -1,20 +1,36 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
 
-def permutate(to_be_permutated, progress=[], permutated=[])
-  if progress.size < to_be_permutated.size
-    grouped_by_member = to_be_permutated.group_by {|e| e}
-    progress.each {|e| grouped_by_member[e].pop}
-    grouped_by_member.values.flatten.uniq.each do |candidate|
-      permutate(to_be_permutated, progress + [candidate], permutated)
-    end
-  else
-    permutated << progress
+class Array
+  def subtract_once(b)
+    h = b.inject({}) {|memo, v|
+      memo[v] ||= 0; memo[v] += 1; memo
+    }
+    reject { |e| h.include?(e) && (h[e] -= 1) >= 0 }
   end
-  permutated
+end
+
+class Multiset
+  include CombinatorialSearch
+  
+  def is_solution?(input, progress)
+    progress.size == input.size
+  end
+  
+  def candidates(input, progress, solutions=[])
+    progress ||= []
+    input.subtract_once(progress).uniq.map do |candidate|
+      progress + [candidate]
+    end
+  end
+  
+  def self.permutate(input)
+    new.backtrack(input)
+  end
 end
 
 class TestPermutation < Test::Unit::TestCase
   def test_permutation_of_multiset
-    assert_equal([[1,1,2,2],[1,2,1,2],[1,2,2,1],[2,1,1,2],[2,1,2,1],[2,2,1,1]], permutate([1,1,2,2]))
+    assert_equal([[1,1,2,2],[1,2,1,2],[1,2,2,1],[2,1,1,2],[2,1,2,1],[2,2,1,1]], Multiset.permutate([1,1,2,2]))
   end
 end

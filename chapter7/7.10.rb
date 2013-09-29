@@ -1,24 +1,47 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
 
-def colour_vertices(graph, progress=[], coloured=[], number_of_iterations=0)
-  number_of_iterations += 1
-  if coloured.empty? or progress.size <= coloured.first.size
-    if progress.flatten.size < graph.keys.size
-      next_vertex = (graph.keys - progress.flatten).first
-      colour_groups = progress.reject {|colour_group| graph[next_vertex].any? {|neighbour| colour_group.include? neighbour}}
-      unless colour_groups.empty?
-        colour_groups.each do |colour_group|
-          number_of_iterations = colour_vertices(graph, (progress - [colour_group]) + [colour_group + [next_vertex]], coloured, number_of_iterations).first
-        end
-      else
-        number_of_iterations = colour_vertices(graph, progress + [[next_vertex]], coloured, number_of_iterations).first
+class VertexColouringByCombinatorialSearch
+  include CombinatorialSearch
+  
+  def is_solution?(input, progress)
+    input.size == progress.size && progress.group_by {|node, colour| colour}.map do |colour, assoc| 
+      Hash[assoc].keys
+    end.all? do |coloured|
+      coloured.all? do |node|
+        (coloured - [node]).all? {|other| !input[other].include? node}
       end
-    else
-      coloured.delete_if {|previous_progress| previous_progress.size > progress.size}
-      coloured << progress.sort_by {|colour_group| colour_group.sort!; colour_group.first}
     end
   end
-  [number_of_iterations, coloured]
+  
+  def candidates(input, progress, solutions)
+    progress ||= {}
+    
+    return [] if !solutions.empty? && solutions.map {|solution| solution.values.uniq.size}.min >= progress.values.uniq.size 
+    
+    candidates = (input.keys - progress.keys).map do |candidate|
+      progress.values.uniq.map do |existing_colour|
+        progress.merge(candidate => existing_colour)
+      end
+    end.flatten(1).select do |progress|
+      progress.group_by {|node, colour| colour}.map do |colour, assoc| 
+        Hash[assoc].keys
+      end.all? do |coloured|
+        coloured.all? do |node|
+          (coloured - [node]).all? {|other| !input[other].include? node}
+        end
+      end
+    end
+    
+    candidates.empty? && (input.keys - progress.keys).map do |candidate|
+      progress.merge(candidate => (progress.values.uniq.max||0)+1)
+    end || candidates
+  end
+  
+  def self.colour(input)
+    solutions = new.backtrack(input)
+    solutions.min_by{|solution| solution.values.uniq.size}
+  end
 end
 
 def colour_vertices_via_simulated_annealing(graph, expected_cost)
@@ -52,7 +75,7 @@ end
 class TestVertexColouring < Test::Unit::TestCase
   def test_colour_vertices
     assert_block("should colour vertices") do
-      coloured = colour_vertices({
+      coloured = VertexColouringByCombinatorialSearch.colour({
         A:[:B, :C], 
         B:[:A, :C], 
         C:[:A, :B, :D, :E], 
@@ -69,12 +92,11 @@ class TestVertexColouring < Test::Unit::TestCase
         N:[:L, :M]
       })
       
-      p coloured
-      coloured.last.include? [[:A, :D, :G, :J, :M], [:B, :E, :H, :K, :N], [:C, :F, :I, :L]]
+      assert_equal(3, coloured.values.uniq.size)
     end
   end
   
-  def test_colour_vertices_via_simulated_annealing
+  def x_test_colour_vertices_via_simulated_annealing
     assert_block("should colour vertices") do
       coloured = colour_vertices_via_simulated_annealing({
         A:[:B, :C], 

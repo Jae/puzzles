@@ -1,31 +1,33 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
 
-def reduce_bandwidth(to_be_arranged, progress={size:0, arrangement:[]}, arranged={size:Float::INFINITY, arrangement:[]})
-  if progress[:arrangement].size < to_be_arranged.size
-    (to_be_arranged.keys - progress[:arrangement]).each do |candidate|
-      unless progress[:arrangement].empty?
-        edge_to_candidate = to_be_arranged[progress[:arrangement].last][candidate]
-        if edge_to_candidate && arranged[:size] > [progress[:size], edge_to_candidate].max
-          reduce_bandwidth(to_be_arranged, {size:[progress[:size], edge_to_candidate].max, arrangement:progress[:arrangement] + [candidate]}, arranged)
-        end
-      else
-        reduce_bandwidth(to_be_arranged, {size:0, arrangement:[candidate]}, arranged)
-      end
-    end
-  else
-    if arranged[:size] > progress[:size]
-      arranged[:size] = progress[:size]
-      arranged[:arrangement] = progress[:arrangement]
+class BandwidthReduction
+  include CombinatorialSearch
+  
+  def is_solution?(input, progress)
+    progress.size == input.size
+  end
+  
+  def candidates(input, progress, solutions=[])
+    progress ||= []
+    
+    (input.keys - progress).map do |candidate|
+      progress + [candidate]
     end
   end
-  arranged[:arrangement]
+  
+  def self.reduce(input, &cost_function)
+    new.backtrack(input).min_by do |arrangement|
+      input.map do |from,neighbours|
+        neighbours.map {|to| (arrangement.index(from) - arrangement.index(to)).abs}
+      end.flatten.reduce(&:+)/2
+    end
+  end
 end
 
 class TestBandwidthReduction < Test::Unit::TestCase
-  def test_reduce_bandwidth
-    assert_block("should reduce bandwidth") do
-      arrangement = reduce_bandwidth({:A=>{:B=>1, :C=>4, :D=>3}, :B=>{:A=>1, :C=>2}, :C=>{:A=>4, :B=>2, :D=>1}, :D=>{:A=>3, :C=>1}})
-      [[:A,:B,:C,:D], [:D, :C, :B, :A]].include? arrangement
-    end
+  def test_bandwidth_reduction
+    arrangement = BandwidthReduction.reduce({1=>[8], 2=>[7, 8], 3=>[6, 7], 4=>[5, 6], 5=>[4], 6=>[4], 7=>[2, 3], 8=>[1, 2]})
+    assert_equal([1, 8, 2, 7, 3, 6, 4, 5], arrangement)
   end
 end
