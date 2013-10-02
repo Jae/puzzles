@@ -1,5 +1,6 @@
 require "test/unit"
 require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
+require File.join(File.dirname(__FILE__), %w(.. lib simulated_annealing))
 
 class VertexColouringByCombinatorialSearch
   include CombinatorialSearch
@@ -44,79 +45,58 @@ class VertexColouringByCombinatorialSearch
   end
 end
 
-def colour_vertices_via_simulated_annealing(graph, expected_cost)
-  temp = 1
-  coloured = graph.keys.map {|vertex| [vertex]}
-  number_of_iterations = 0
-  begin
-    10.times do |_|
-      number_of_iterations += 1
-      random_vertex = coloured.sample.sample
-      origin_colour_group = coloured.find {|colour_group| colour_group.include? random_vertex}
-      target_colour_group = (coloured - [origin_colour_group]).reject {|colour_group| colour_group.any? {|vertex| graph[random_vertex].include? vertex}}.sample || []
-      
-      progress = (
-        (coloured - [target_colour_group] - [origin_colour_group]) + 
-        [target_colour_group + [random_vertex]] + 
-        [origin_colour_group - [random_vertex]]
-       ).reject {|colour_group| colour_group.empty?}
-
-      if progress.size < coloured.size
-        coloured = progress
-      elsif Math.exp((coloured.size - progress.size)/temp) > rand
-        coloured = progress
-      end
+class VertexColouringBySimulatedAnnealing
+  include SimulatedAnnealing
+  
+  def cost_of(input, solution)
+    solution.values.uniq.size
+  end
+  
+  def make_progress(input, solution=nil)
+    unless solution
+      Hash[input.keys.each_with_index.map {|node, index| [node, index]}]
+    else
+      random_node = solution.keys.sample
+      solution.merge(random_node => (solution.values.uniq - [solution[random_node]]).sample)
     end
-    temp *= 0.8
-  end until coloured.size <= expected_cost
-  [number_of_iterations, coloured]
+  end
+  
+  def self.colour(input, expected_cost)
+    new.simulate(input, expected_cost)
+  end
 end
 
 class TestVertexColouring < Test::Unit::TestCase
+  def input
+    {
+      A:[:B, :C], 
+      B:[:A, :C], 
+      C:[:A, :B, :D, :E], 
+      D:[:C, :E, :F],
+      E:[:C, :D, :F],
+      F:[:D, :E, :G, :H],
+      G:[:F, :I],
+      H:[:F, :I],
+      I:[:G, :H, :J, :K],
+      J:[:I, :K, :L],
+      K:[:I, :J, :L],
+      L:[:J, :K, :M, :N],
+      M:[:L, :N],
+      N:[:L, :M]
+    }
+  end
+  
   def test_colour_vertices
     assert_block("should colour vertices") do
-      coloured = VertexColouringByCombinatorialSearch.colour({
-        A:[:B, :C], 
-        B:[:A, :C], 
-        C:[:A, :B, :D, :E], 
-        D:[:C, :E, :F],
-        E:[:C, :D, :F],
-        F:[:D, :E, :G, :H],
-        G:[:F, :I],
-        H:[:F, :I],
-        I:[:G, :H, :J, :K],
-        J:[:I, :K, :L],
-        K:[:I, :J, :L],
-        L:[:J, :K, :M, :N],
-        M:[:L, :N],
-        N:[:L, :M]
-      })
-      
+      coloured = VertexColouringByCombinatorialSearch.colour(input)
       assert_equal(3, coloured.values.uniq.size)
     end
   end
   
-  def x_test_colour_vertices_via_simulated_annealing
+  def test_colour_vertices_via_simulated_annealing
     assert_block("should colour vertices") do
-      coloured = colour_vertices_via_simulated_annealing({
-        A:[:B, :C], 
-        B:[:A, :C], 
-        C:[:A, :B, :D, :E], 
-        D:[:C, :E, :F],
-        E:[:C, :D, :F],
-        F:[:D, :E, :G, :H],
-        G:[:F, :I],
-        H:[:F, :I],
-        I:[:G, :H, :J, :K],
-        J:[:I, :K, :L],
-        K:[:I, :J, :L],
-        L:[:J, :K, :M, :N],
-        M:[:L, :N],
-        N:[:L, :M]
-      }, 3)
-      
-      p coloured
-      coloured.first <= 202
+      coloured = VertexColouringBySimulatedAnnealing.colour(input, 3)
+      assert_equal(3, coloured.values.uniq.size)
     end
   end
 end

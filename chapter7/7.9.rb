@@ -1,5 +1,6 @@
 require "test/unit"
 require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
+require File.join(File.dirname(__FILE__), %w(.. lib simulated_annealing))
 
 class MaximumClique
   include CombinatorialSearch
@@ -28,9 +29,31 @@ class MaximumClique
   end
 end
 
+class MaximumCliqueBySimulatedAnnealing
+  include SimulatedAnnealing
+  
+  def cost_of(input, solution)
+    1.0 / solution.size
+  end
+  
+  def make_progress(input, solution=nil)
+    unless solution
+      [input.keys.sample]
+    else
+      new_member = (input.keys - solution).sample
+      oposing_members = solution.select {|existing_member| !input[existing_member].include? new_member}
+      (solution - oposing_members + [[new_member], oposing_members].sample)
+    end
+  end
+  
+  def self.find(input, expected_cost)
+    new.simulate(input, expected_cost)
+  end
+end
+
 class TestMaximumClique < Test::Unit::TestCase
-  def test_maximum_clique
-    solution = MaximumClique.find({
+  def input
+    {
       A: [:L, :M, :N, :B],
       B: [:A, :N, :C],
       C: [:B, :N, :D],
@@ -48,7 +71,16 @@ class TestMaximumClique < Test::Unit::TestCase
       O: [:M, :N, :E, :F, :G, :P, :Q],
       P: [:Q, :M, :N, :O, :G, :H, :I],
       Q: [:K, :L, :M, :N, :O, :P, :I, :J]
-    })
+    }
+  end
+  
+  def test_maximum_clique
+    solution = MaximumClique.find(input)
     assert_equal([:M, :N, :O, :P, :Q], solution)
+  end
+  
+  def test_maximum_clique_by_simulated_annealing
+    solution = MaximumCliqueBySimulatedAnnealing.find(input, 1.0/5)
+    assert_equal([:M, :N, :O, :P, :Q], solution.sort)
   end
 end

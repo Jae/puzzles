@@ -1,5 +1,6 @@
 require "test/unit"
 require File.join(File.dirname(__FILE__), %w(.. lib combinatorial_search))
+require File.join(File.dirname(__FILE__), %w(.. lib simulated_annealing))
 
 class MinimumSetCover
   include CombinatorialSearch
@@ -26,9 +27,32 @@ class MinimumSetCover
   end
 end
 
+class MinimumSetCoverBySimulatedAnnealing
+  include SimulatedAnnealing
+  
+  def cost_of(input, solution)
+    solution.size
+  end
+  
+  def make_progress(input, solution=nil)
+    left_over = input
+    progress = []
+    until progress.flatten.uniq.sort == input.flatten.uniq.sort
+      selected = left_over.sample
+      left_over -= [selected]
+      progress += [selected]
+    end
+    progress
+  end
+  
+  def self.find(input, expected_cost)
+    new.simulate(input, expected_cost)
+  end
+end
+
 class TestMinimumSetCover < Test::Unit::TestCase
-  def test_minimum_set_cover
-    set_cover = MinimumSetCover.find([
+  def input
+    [
       [:A, :D],
       [:B, :E],
       [:C, :F],
@@ -36,10 +60,18 @@ class TestMinimumSetCover < Test::Unit::TestCase
       [:F, :K],
       [:G, :H, :I, :J, :K, :L],
       [:A, :B, :C, :D, :F, :G, :I]
-    ])
+    ]
+  end
+  
+  def test_minimum_set_cover
+    set_cover = MinimumSetCover.find(input)
+    
     assert_equal(3, set_cover.size)
-    assert(set_cover.include? [:B, :E])
-    assert(set_cover.include? [:G, :H, :I, :J, :K, :L])
-    assert(set_cover.include? [:A, :B, :C, :D, :F, :G, :I])
+  end
+  
+  def test_minimum_set_cover_by_simulated_annealing
+    set_cover = MinimumSetCoverBySimulatedAnnealing.find(input, 3)
+    
+    assert_equal(3, set_cover.size)
   end
 end
