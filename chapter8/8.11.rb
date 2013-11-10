@@ -1,18 +1,22 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def maximum_contiguous_sum(numbers)
-  sum = [numbers[0], [0]]
-
-  (1...numbers.size).each do |i|
-    sums = []
-    sums << sum                                                                # leave the run
-    sums << [sum[0] + numbers[i], sum[1] + [i]] if sum[1].last == i-1          # continue the run
-    sums << [numbers[i], [i]]                                                  # start a new run
-    sums << [numbers[sum[1].first..i].inject(0) {|memo, number| memo += number}, (sum[1].first..i).to_a] unless sum[1].last == i-1 # bridge the run
-    sum = sums.max_by {|(sum,_)| sum}
+  progress = DynamicProgress.new(numbers.size)
+  
+  progress.each do |i| #progress[i] = maximum contiguous sum of numbers from 1 to ith position
+    if i == 0
+      {:contiguous_range => (0...0)}
+    else
+      [
+        {:contiguous_range => progress[i-1][:contiguous_range]},            # biggest run so far
+        {:contiguous_range => (i-1...i)},                                   # new run
+        {:contiguous_range => (progress[i-1][:contiguous_range].first...i)} # extends previous best run
+      ].max_by {|e| e[:contiguous_range].map {|i| numbers[i]}.reduce(&:+) || 0}
+    end
   end
-
-  sum[1].map {|i| numbers[i]}
+  
+  progress.goal[:contiguous_range].map {|i| numbers[i]}
 end
 
 class TestMaximumContiguousSum < Test::Unit::TestCase

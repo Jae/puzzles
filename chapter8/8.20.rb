@@ -1,4 +1,5 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def dial_distance(first_number, second_number)
   dial_pad = [
@@ -21,47 +22,40 @@ end
 
 def dial_numbers(numbers)
   dialpad = [1,2,3,4,5,6,7,8,9,0,"*","#"]
-  dialed = Array.new(numbers.size) {Array.new(12) {Array.new(12)}} #dialed[i][l][r] = d where d is minimum distance fingers travelled to dial numbers[0..i] so that left and right fingers ended up at l and r positions
   
-  12.times do |l|
-    12.times do |r|
-      number = numbers.first
-      if [dialpad[l], dialpad[r]] == [number, "#"]
-        dialed[0][l][r] = [dial_distance("*", number), ["l#{number}".to_sym]] 
-      elsif [dialpad[l], dialpad[r]] == ["*", number]
-        dialed[0][l][r] = [dial_distance("#", number), ["r#{number}".to_sym]]
-      else
-        dialed[0][l][r] = [Float::INFINITY, []]
-      end
+  progress = DynamicProgress.new(numbers.size-1, dialpad.size-1, dialpad.size-1) do |current_goal, operation|
+    if operation && operation[:index] == numbers.size-1
+      !current_goal && operation || operation[:cost] < current_goal[:cost] && operation || current_goal
+    else
+      current_goal
     end
   end
-  
-  (1...numbers.size).each do |i|
+  progress.each do |i,j,k|  #progress[i,j,k] = laziest way to dial upto ith zero indexed number such that left and right fingers finish on jth and kth zero indexed number in dialpad
     number = numbers[i]
-    12.times do |l|
-      12.times do |r|
-        if dialpad[l] == number
-          dialed[i][l][r] = 12.times.map do |pre_l|
-            [dialed[i-1][pre_l][r][0] + dial_distance(dialpad[pre_l], number), dialed[i-1][pre_l][r][1] + ["l#{number}".to_sym]]
-          end.min_by {|(distance,_)| distance}
-        elsif dialpad[r] == number
-          dialed[i][l][r] = 12.times.map do |pre_r|
-            [dialed[i-1][l][pre_r][0] + dial_distance(dialpad[pre_r], number), dialed[i-1][l][pre_r][1] + ["r#{number}".to_sym]]
-          end.min_by {|(distance,_)| distance}
-        else
-          dialed[i][l][r] = [Float::INFINITY, []]
-        end
+    if dialpad[j] == number && dialpad[k] != number #left finger on the ith number
+      if i == 0
+        {:cost => dial_distance("*", number), :key_press => "l#{number}".to_sym, :previous => nil, :index => i} if dialpad[k] == "#"
+      else
+        (0...dialpad.size).select do |prev_j|
+          progress[i-1, prev_j, k] && dialpad[prev_j] != dialpad[k] && (numbers[0...i] + ["*", "#"]).include?(dialpad[prev_j])
+        end.map do |prev_j|
+          {:cost => progress[i-1, prev_j, k][:cost] + dial_distance(dialpad[prev_j], number), :key_press => "l#{number}".to_sym, :previous => [i-1, prev_j, k], :index => i}
+        end.min_by {|key_press| key_press[:cost]}
+      end
+    elsif dialpad[j] != number && dialpad[k] == number #right finger on the ith number
+      if i == 0
+        {:cost => dial_distance("#", number), :key_press => "r#{number}".to_sym, :previous => nil, :index => i} if dialpad[j] == "*"
+      else
+        (0...dialpad.size).select do |prev_k|
+          progress[i-1, j, prev_k] && dialpad[j] != dialpad[prev_k] && (numbers[0...i] + ["*", "#"]).include?(dialpad[prev_k])
+        end.map do |prev_k|
+          {:cost => progress[i-1, j, prev_k][:cost] + dial_distance(dialpad[prev_k], number), :key_press => "r#{number}".to_sym, :previous => [i-1, j, prev_k], :index => i}
+        end.min_by {|key_press| key_press[:cost]}
       end
     end
   end
-  
-  min_dial = [Float::INFINITY, []]
-  12.times do |l|
-    12.times do |r|
-      min_dial = dialed.last[l][r] if dialed.last[l][r][0] < min_dial[0]
-    end
-  end
-  min_dial
+
+  [progress.goal[:cost], progress.operation_trails.map {|op| op[:key_press]}]
 end
 
 class TestDialNumbers < Test::Unit::TestCase

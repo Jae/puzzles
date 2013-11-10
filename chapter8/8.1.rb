@@ -1,4 +1,5 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def edit_cost(operation, current = "", target = "")
   case
@@ -18,56 +19,44 @@ def edit_cost(operation, current = "", target = "")
 end
 
 def edit_distance(text, pattern)
-  editions = Array.new(text.size+1) {[]}
-  (0..text.size).each do |text_index|
-    editions[text_index][0] = [text_index, text_index.times.map {|_| :delete}]
-  end
-  (0..pattern.size).each do |pattern_index|
-    editions[0][pattern_index] = [pattern_index, pattern_index.times.map {|_| :insert}]
-  end
-
-  (1..text.size).each do |text_index|
-    (1..pattern.size).each do |pattern_index|
+  progress = DynamicProgress.new(text.size, pattern.size)
+  
+  progress.each do |i, j| #progress[i,j] = edit operation to match ith character of text to jth character of pattern
+    if i == 0 && j == 0
+      {:cost => 0, :previous => nil, :operation => nil}
+    elsif j == 0
+      {:cost => i, :previous => [i-1, j], :operation => :delete}
+    elsif i == 0
+      {:cost => j, :previous => [i, j-1], :operation => :insert}
+    else
       operations = [
-        [:match, text[text_index-1], pattern[pattern_index-1], editions[text_index-1][pattern_index-1]],
-        [:sub, text[text_index-1], pattern[pattern_index-1], editions[text_index-1][pattern_index-1]],
-        [:insert, "", pattern[pattern_index-1], editions[text_index][pattern_index-1]],
-        [:delete, text[text_index-1], "", editions[text_index-1][pattern_index]]
+        {
+          :operation => :match, :previous => [i-1, j-1],
+          :cost => progress[i-1, j-1][:cost] + edit_cost(:match, text[i-1], pattern[j-1]),
+        },
+        {
+          :operation => :sub, :previous => [i-1, j-1],
+          :cost => progress[i-1, j-1][:cost] + edit_cost(:sub, text[i-1], pattern[j-1]),
+        },
+        {
+          :operation => :insert, :previous => [i, j-1],
+          :cost => progress[i, j-1][:cost] + edit_cost(:insert, "", pattern[j-1]),
+        },
+        {
+          :operation => :delete, :previous => [i-1, j],
+          :cost => progress[i-1, j][:cost] + edit_cost(:delete, text[i-1], ""),
+        }
       ]
-      operations << [:swap, text[text_index-2..text_index-1], pattern[pattern_index-2..pattern_index-1], editions[text_index-2][pattern_index-2]] if text_index > 1 and pattern_index > 1
+      operations << {
+        :operation => :swap, :previous => [i-2, j-2],
+        :cost => progress[i-2, j-2][:cost] + edit_cost(:swap, text[i-2..i-1], pattern[j-2..j-1]),
+      } if i > 1 && j > 1
       
-      editions[text_index][pattern_index] = operations.map do |(operation, current, target, past_editions)|
-        cost = edit_cost(operation, current, target) + past_editions[0]
-        [cost, past_editions[1] + [operation]]
-      end.min_by {|edition| edition[0]}
+      operations.min_by {|operation| operation[:cost]}
     end
   end
   
-  editions.last.last
-end
-
-def recursive_edit_distance(text, pattern)
-  if text.size == 0 && pattern.size == 0
-    [0, []]
-  elsif text.size == 0
-    [pattern.size, pattern.size.times.map {|_| :insert}]
-  elsif pattern.size == 0
-    [text.size, text.size.times.map {|_| :delete}]
-  else
-    operations = [
-      [:match, text[-1], pattern[-1], text[0...-1], pattern[0...-1]],
-      [:sub, text[-1], pattern[-1], text[0...-1], pattern[0...-1]],
-      [:insert, "", pattern[-1], text, pattern[0...-1]],
-      [:delete, text[-1], "", text[0...-1], pattern]
-    ]
-    operations << [:swap, text[-2..-1], pattern[-2..-1], text[0...-2], pattern[0...-2]] if text.size > 1 and pattern.size > 1
-    
-    operations.map do |(operation, current, target, remaining_text, remaining_pattern)|
-      past_editions = recursive_edit_distance(remaining_text, remaining_pattern)
-      cost = edit_cost(operation, current, target) + past_editions[0]
-      [cost, past_editions[1].push(operation)]
-    end.min_by {|edition| edition[0]}
-  end
+  [progress.operation_trails.last[:cost], progress.operation_trails.map {|op| op[:operation]}.compact]
 end
 
 class TestEditDistance < Test::Unit::TestCase

@@ -1,72 +1,48 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
-def edit_cost(operation, current = "", target = "")
-  case
-    when operation == :match && [current.size, target.size] == [1, 1]
-      target == current ? 0 : Float::INFINITY
-    when operation == :insert && [current.size, target.size] == [0, 1]
-      1
-    when operation == :delete && [current.size, target.size] == [1, 0]
-      1
+def common_sequence(text1, text2)
+  progress = DynamicProgress.new(text1.size, text2.size) do |current_goal, operation|
+    current_goal && current_goal[:lcs] > operation[:lcs] && current_goal || operation
+  end
+  
+  progress.each do |i, j| #progress[i,j] = longest common subsequence of text1[0...i] and text2[0...j]
+    if i == 0 || j == 0
+      {:lcs => 0, :previous => nil, :common_subsequence => "", :action => :skip}
     else
-      raise "unknown operation '#{operation}' from '#{current}' to '#{target}'"
-  end
-end
-
-def edit_distance(text, pattern)
-  editions = Array.new(text.size+1) {[]} # editions[i][j] = [min_cost, [operations]] done to match ith text with jth pattern
-  (0..text.size).each do |text_index|
-    editions[text_index][0] = [text_index, text_index.times.map {|_| :delete}]
-  end
-  (0..pattern.size).each do |pattern_index|
-    editions[0][pattern_index] = [pattern_index, pattern_index.times.map {|_| :insert}]
-  end
-
-  (1..text.size).each do |text_index|
-    (1..pattern.size).each do |pattern_index|
-      operations = [
-        [:match, text[text_index-1], pattern[pattern_index-1], editions[text_index-1][pattern_index-1]],
-        [:insert, "", pattern[pattern_index-1], editions[text_index][pattern_index-1]],
-        [:delete, text[text_index-1], "", editions[text_index-1][pattern_index]]
-      ]
-      
-      editions[text_index][pattern_index] = operations.map do |(operation, current, target, past_editions)|
-        cost = edit_cost(operation, current, target) + past_editions[0]
-        [cost, past_editions[1] + [operation]]
-      end.min_by {|edition| edition[0]}
+      if text1[i-1] == text2[j-1]
+        {:lcs => progress[i-1,j-1][:lcs] + 1, :previous => [i-1,j-1], :index => [i,j], :action => :match}
+      else
+        [
+          {:lcs => progress[i,j-1][:lcs], :previous => [i,j-1], :index => [i,j], :action => :skip},
+          {:lcs => progress[i-1,j][:lcs], :previous => [i-1,j], :index => [i,j], :action => :skip}
+        ].max_by {|operation| operation[:lcs]}
+      end
     end
   end
-  editions.last.last
+
+  progress.operation_trails
 end
 
 def longest_common_subsequence(text1, text2)
-  operations = edit_distance(text1, text2)[1]
-  
-  text1 = text1.chars.to_a
-  operations.map do |operation|
-    if operation == :match
-      text1.shift
-    else
-      text1.shift && "" if operation == :delete
-    end
-  end.join("")
+  common_sequence(text1, text2).select do |operation|
+    operation[:action] == :match
+  end.map do |operation|
+    text1[operation[:index].first-1]
+  end.join
 end
 
 def shortest_common_supersequence(text1, text2)
-  operations = edit_distance(text1, text2)[1]
-  
-  text1 = text1.chars.to_a
-  text2 = text2.chars.to_a
-  operations.map do |operation|
-    if operation == :delete
-      text1.shift
-    elsif operation == :insert
-      text2.shift
-    else
-      text1.shift
-      text2.shift
-    end
-  end.join("")
+  (common_sequence(text1, text2).select do |operation|
+    operation[:action] == :match
+  end << {:index => [text1.size+1, text2.size+1], :last => true}).each_with_index.inject({:supersequence => "", :matches => [{:i => 0, :j => 0}]}) do |memo, (operation, index)|    
+    memo[:supersequence] << text1[memo[:matches].last[:i]...operation[:index].first - 1]
+    memo[:supersequence] << text2[memo[:matches].last[:j]...operation[:index].last - 1]
+    memo[:supersequence] << text1[operation[:index].first - 1] unless operation[:last]
+    
+    memo[:matches] << {:i => operation[:index].first, :j => operation[:index].last}
+    memo
+  end[:supersequence]
 end
 
 class TestLongestCommonSequence < Test::Unit::TestCase

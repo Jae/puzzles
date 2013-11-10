@@ -1,55 +1,29 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def city_walks(city_size, bad_neighborhoods)
-  walks = Array.new(city_size[0]) { Array.new(city_size[1]) } # walks[i][j] = previous minimum walk position that lead to city[i][j]
-  walks[0][0] = [] 
-  
-  next_stops = Proc.new do |stop|
-    [
-                            [stop[0], stop[1]-1],
-      [stop[0]-1, stop[1]],                       [stop[0]+1, stop[1]],
-                            [stop[0], stop[1]+1]
-    ].select do |(x,y)|
-      x >= 0 && y >= 0 && x < city_size[0] && y < city_size[1] &&
-      !bad_neighborhoods.include?([x,y]) && 
-      walks[x][y].nil?
-    end
+  progress = DynamicProgress.new(city_size[0], city_size[1]) do |current_goal, operation|
+    operation && operation[:intersection] == [city_size[0], city_size[1]] && operation
   end
-
-  last_stops = [[0,0]]
-  until last_stops.all? {|last_stop| next_stops.call(last_stop).empty? }
-    last_stops = last_stops.map {|last_stop| [last_stop, next_stops.call(last_stop)]}.inject([]) do  |memo, (last_stop, next_stops)|
-      next_stops.each do |next_stop|
-        ((walks[next_stop[0]][next_stop[1]] ||= []) << last_stop).uniq!
-        memo << next_stop
-      end
-      memo
-    end
-  end
-  
-  if walks[city_size[0]-1][city_size[1]-1]
-    journeys = [[[city_size[0]-1, city_size[1]-1]]]
-    until journeys.all? {|journey| journey.first == [0,0]}
-      journeys = journeys.inject([]) do |memo, journey|
-        walks[journey.first[0]][journey.first[1]].each do |last_stop|
-          memo << journey.clone.unshift(last_stop)
-        end
-        memo
+  progress.each do |i,j| #progress[i,j] = shortest route to [i,j] intersection without going through bad neighbourhoods
+    unless bad_neighborhoods.include?([i,j])
+      if i == 0 && j == 0
+        {:intersection => [i,j], :cost => 0, :routes_to_intersection => 1}
+      else
+        cost, min_routes = [[i-1, j], [i, j-1]].select {|prev_i, prev_j| progress[prev_i, prev_j]}.map do |prev_i, prev_j|
+          {:cost => progress[prev_i, prev_j][:cost] + 1, :routes_to_intersection => progress[prev_i, prev_j][:routes_to_intersection]}
+        end.group_by {|op| op[:cost]}.min_by{|cost, ops| cost}
+        
+        {:intersection => [i,j], :cost => cost, :routes_to_intersection => min_routes.map {|e|e[:routes_to_intersection]}.reduce(&:+)} if min_routes
       end
     end
-    journeys
-  else
-    []
   end
+  progress.goal[:routes_to_intersection]
 end
 
 class TestCityWalk < Test::Unit::TestCase
   def test_city_walk
-    assert_equal([], city_walks([3,3], [[2,1], [1,2]]))
-    assert_equal([
-      [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3]],
-      [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [3, 3]],
-      [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3]]
-    ], city_walks([4,4], [[1,1], [2,1], [0,3], [1,3]]))
+    assert_equal(2, city_walks([3,3], [[2,1], [1,2]]))
+    assert_equal(11, city_walks([4,4], [[1,1], [2,1], [0,3], [1,3]]))
   end
 end

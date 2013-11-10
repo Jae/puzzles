@@ -1,69 +1,32 @@
 require "test/unit"
-
-def edit_cost(operation, current = "", target = "")
-  case
-    when operation == :match && [current.size, target.size] == [1, 1]
-      target == current ? 0 : Float::INFINITY
-    when operation == :insert && [current.size, target.size] == [0, 1]
-      1
-    when operation == :delete && [current.size, target.size] == [1, 0]
-      1
-    else
-      raise "unknown operation '#{operation}' from '#{current}' to '#{target}'"
-  end
-end
-
-def edit_distance(text, pattern)
-  editions = Array.new(text.size+1) {[]} # editions[i][j] = [min_cost, [operations]] done to match ith text with jth pattern
-  (0..text.size).each do |text_index|
-    editions[text_index][0] = [text_index, text_index.times.map {|_| :delete}]
-  end
-  (0..pattern.size).each do |pattern_index|
-    editions[0][pattern_index] = [pattern_index, pattern_index.times.map {|_| :insert}]
-  end
-
-  (1..text.size).each do |text_index|
-    (1..pattern.size).each do |pattern_index|
-      operations = [
-        [:match, text[text_index-1], pattern[pattern_index-1], editions[text_index-1][pattern_index-1]],
-        [:insert, "", pattern[pattern_index-1], editions[text_index][pattern_index-1]],
-        [:delete, text[text_index-1], "", editions[text_index-1][pattern_index]]
-      ]
-      
-      editions[text_index][pattern_index] = operations.map do |(operation, current, target, past_editions)|
-        cost = edit_cost(operation, current, target) + past_editions[0]
-        [cost, past_editions[1] + [operation]]
-      end.min_by {|edition| edition[0]}
-    end
-  end
-  editions.last.last
-end
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def dynamic_longest_common_string(text1, text2)
-  operations = edit_distance(text1, text2)[1]
+  progress = DynamicProgress.new(text1.size, text2.size) do |current_goal, operation|
+    current_goal && current_goal[:length] > operation[:length] && current_goal || operation
+  end
   
-  text1 = text1.chars.to_a
-  operations.inject([""]) do |memo, operation|
-    if operation == :match
-      memo[-1] << text1.shift
+  progress.each do |i, j| #progress[i,j] = length of common string ending at ith character of text1 and jth character of text2
+    if i == 0 && j == 0
+      {:length => 0, :previous => nil, :character => nil}
+    elsif i == 0
+      {:length => 0, :previous => nil, :character => nil}
+    elsif j == 0
+      {:length => 0, :previous => nil, :character => nil}
     else
-      text1.shift if operation == :delete
-      memo << ""
+      if text1[i-1] == text2[j-1]
+        {:length => progress[i-1, j-1][:length] + 1, :previous => [i-1, j-1], :character => text1[i-1]}
+      else
+        {:length => 0, :previous => nil, :character => nil}
+      end
     end
-    memo
-  end.max_by {|match| match.size}
-end
+  end
 
-def longest_common_string(text1, text2)
-  
+  progress.operation_trails.map {|operation| operation[:character]}.compact.join
 end
 
 class TestLongestCommonString < Test::Unit::TestCase
   def test_dynamic_longest_common_string
     assert_equal("ograph", dynamic_longest_common_string("photograph", "tomography"))
-  end
-  
-  def test_longest_common_string
-    assert_equal("ograph", longest_common_string("photograph", "tomography"))
   end
 end

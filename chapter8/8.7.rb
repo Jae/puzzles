@@ -1,13 +1,26 @@
 require "test/unit"
-  
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
+
 def distinct_changes_by_coins(amount, coins)
-  coins.select {|coin| amount >= coin}.inject(0) do |sum, coin|
-    if amount - coin == 0
-      sum += 1 
+  progress = DynamicProgress.new(amount) do |current_goal, operation|
+    operation.any? {|e| e[:changes].map {|coin, change| coin * change}.reduce(&:+) == amount} && operation || current_goal
+  end
+  
+  progress.each do |sub_amount| #progress[i] = coin changes for the amount i if possible
+    if sub_amount == 0
+      [{:changes => Hash[coins.map {|coin| [coin, 0]}]}]
     else
-      sum += distinct_changes_by_coins(amount-coin, coins.select{|rest| rest <= coin})
+      coins.map {|coin| [coin, sub_amount - coin]}.select do |coin, previous_sub_amount|
+        progress[previous_sub_amount]
+      end.map do |coin, previous_sub_amount|
+        progress[previous_sub_amount].map do |e|
+          {:changes => e[:changes].merge(coin => e[:changes][coin] + 1)}
+        end
+      end.flatten(1).uniq {|e| e[:changes]}
     end
   end
+
+  progress.goal.size
 end
 
 class TestNumberOfDistinctChangeByCoins < Test::Unit::TestCase

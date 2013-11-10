@@ -1,46 +1,27 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def city_walk(city_size, bad_neighborhoods)
-  walks = Array.new(city_size[0]) { Array.new(city_size[1]) } # walks[i][j] = previous minimum walk position that lead to city[i][j]
-  walks[0][0] = []
-  
-  next_stops = Proc.new do |stop|
-    [
-                            [stop[0], stop[1]-1],
-      [stop[0]-1, stop[1]],                       [stop[0]+1, stop[1]],
-                            [stop[0], stop[1]+1]
-    ].select do |(x,y)|
-      x >= 0 && y >= 0 && x < city_size[0] && y < city_size[1] &&
-      !bad_neighborhoods.include?([x,y]) && 
-      walks[x][y].nil?
-    end
+  progress = DynamicProgress.new(city_size[0], city_size[1]) do |current_goal, operation|
+    operation && operation[:intersection] == [city_size[0], city_size[1]] && operation
   end
-
-  last_stops = [[0,0]]
-  until last_stops.all? {|last_stop| next_stops.call(last_stop).empty? }
-    last_stops = last_stops.inject([]) do |memo, last_stop|
-      next_stops.call(last_stop).each do |next_stop|
-        walks[next_stop[0]][next_stop[1]] = last_stop
-        memo << next_stop
+  progress.each do |i,j| #progress[i,j] = shortest route to [i,j] intersection without going through bad neighbourhoods
+    unless bad_neighborhoods.include?([i,j])
+      if i == 0 && j == 0
+        {:intersection => [i,j], :previous => nil, :cost => 0}
+      else
+        [[i-1, j], [i, j-1]].select {|prev_i, prev_j| progress[prev_i, prev_j]}.map do |prev_i, prev_j|
+          {:intersection => [i,j], :previous => [prev_i, prev_j], :cost => progress[prev_i, prev_j][:cost] + 1}
+        end.min_by {|op| op[:cost]}
       end
-      memo
     end
   end
-  
-  if walks[city_size[0]-1][city_size[1]-1]
-    journey = [[city_size[0]-1, city_size[1]-1]]
-    until journey.first == [0, 0]
-      journey.unshift(walks[journey.first[0]][journey.first[1]])
-    end
-    journey
-  else
-    []
-  end
+  progress.goal && progress.operation_trails.map {|op| op[:intersection]} || []
 end
 
 class TestCityWalk < Test::Unit::TestCase
   def test_city_walk
-    assert_equal([], city_walk([3,3], [[2,1], [1,2]]))
-    assert_equal([[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3]], city_walk([4,4], [[1,1], [2,1], [3,2], [3,0], [0,3], [1,3]]))
+    assert_equal([], city_walk([3,3], [[2,1], [1,2], [3,1], [2,3]]))
+    assert_equal([[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3], [4, 3]], city_walk([4,3], [[1,1], [2,1], [3,2], [3,0], [0,3], [1,3]]))
   end
 end

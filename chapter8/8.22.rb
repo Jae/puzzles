@@ -1,4 +1,5 @@
 require "test/unit"
+require File.join(File.dirname(__FILE__), %w(.. lib dynamic_programming))
 
 def multiple_of(factors)
   alphabets = ["a", "b", "c"]
@@ -10,70 +11,56 @@ def multiple_of(factors)
 end
 
 def factors_of(to_be_factored)
-  factors = []
   alphabets = ["a", "b", "c"]
   [
     ["a", "c", "c"],
     ["a", "a", "b"],
     ["c", "c", "c"]
-  ].each_with_index do |products, first_factor|
+  ].each_with_index.reduce([]) do |factors, (products, first_factor)|
     products.each_with_index do |product, second_factor|
       factors << [alphabets[first_factor], alphabets[second_factor]] if product == to_be_factored
     end
+    factors
   end
-  factors
 end
 
-def dynamic_parenthesize_multiplication(multiplication, product)
+def parenthesize(multiplication, product)
   alphabets = ["a", "b", "c"]
-  parenthesized = Array.new(multiplication.size) { Array.new(multiplication.size) } # parenthesized[i][j] = {"a" =>[], "b" => [], "c" => []} submultiplication of size i+1 from j index product to each alphabet
-  
-  parenthesized.each_index do |j|
-    parenthesized[0][j] = Hash[alphabets.map do |alphabet|
-      if multiplication[j..j] == alphabet
-        [alphabet, [alphabet]]
-      else
-        [alphabet, []]
-      end
-    end]
-    
-    parenthesized[1][j] = Hash[alphabets.map do |alphabet|
-      if multiple_of(multiplication[j..j+1].chars.to_a) == alphabet
-        [alphabet, multiplication[j..j+1].chars.to_a]
-      else
-        [alphabet, []]
-      end
-    end]
+  multiplication = multiplication.chars.to_a
+  progress = DynamicProgress.new(multiplication.size, multiplication.size-1, alphabets.size-1) do |current_goal, operation|
+    target_alphabet = alphabets.index(product)
+    operation && operation[:index] == [multiplication.size, 0, target_alphabet] && operation || current_goal
   end
-
-  (2...parenthesized.size).each do |i|
-    parenthesized[i].each_index do |j|
-      parenthesized[i][j] = {"a" => [], "b" => [], "c" => []}
-      ["a", "b", "c"].each do |character|
-        factors_of(character).each do |factors|
-          sub_multiplication = multiplication[j..j+i]
-          (1...sub_multiplication.size).each do |divider|
-            first_groups = parenthesized[divider-1][j][factors[0]]
-            second_groups = parenthesized[sub_multiplication.size-divider-1][j+divider][factors[1]]
-            
-            unless first_groups.empty? || second_groups.empty?
-              parenthesized[i][j][character] = [first_groups] + [second_groups]
-              break
-            end
+  progress.each do |i,j,k| #progress[i,j,k] = parenthesization of multiplication of size i from jth zero indexed character to produce kth zero indexed alphabet
+    if j + i - 1 < multiplication.size
+      if i > 2
+        factors_of(alphabets[k]).map do |factor1, factor2|
+          (j...j+i-1).map do |split|
+            part1 = progress[split-j+1,j,alphabets.index(factor1)]
+            part2 = progress[j+i-1-split,split+1,alphabets.index(factor2)]
+            part1 && part2 && {:index => [i,j,k], :multiplication => [part1[:multiplication], part2[:multiplication]]} || nil 
           end
-        end
+        end.flatten.compact.uniq.first
+      elsif i == 1
+        {:index => [i,j,k], :multiplication => alphabets[k]} if multiplication[j] == alphabets[k]
+      elsif i == 2
+        factors_of(alphabets[k]).select do |factor1, factor2|
+          "#{factor1}#{factor2}" == multiplication[j..j+i-1].join("")
+        end.map do |factor1, factor2|
+          {:index => [i,j,k], :multiplication => [factor1, factor2]}
+        end.first# .tap {|e| p ["p2", e]}
       end
     end
   end
   
-  parenthesized.last.first[product]
+  progress.goal[:multiplication]
 end
 
 class TestParenthesizeMultiplication < Test::Unit::TestCase
   def test_parenthesize_multiplication
-    assert_equal([["a"], [[["b"], ["c", "a"]], ["b", "c"]]], dynamic_parenthesize_multiplication("abcabc", "a"))
-    assert_equal([["b"], ["b", "b"]], dynamic_parenthesize_multiplication("bbb", "a"))
-    assert_equal([["b"], [["b"], [["b"], ["b", "a"]]]], dynamic_parenthesize_multiplication("bbbba", "a"))
-    assert_equal([[["b", "b"], ["b"]], ["b", "a"]], dynamic_parenthesize_multiplication("bbbba", "c"))
+    assert_equal(["a", [["b", ["c", "a"]], ["b", "c"]]], parenthesize("abcabc", "a"))
+    assert_equal(["b", ["b", "b"]], parenthesize("bbb", "a"))
+    assert_equal([["b", "b"], [["b", "b"], "a"]], parenthesize("bbbba", "a"))
+    assert_equal([[["b", "b"], "b"], ["b", "a"]], parenthesize("bbbba", "c"))
   end
 end
